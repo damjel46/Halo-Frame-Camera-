@@ -1,8 +1,9 @@
 import React, { useCallback, useState } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
-  StyleSheet, Alert, Image,
+  StyleSheet, Alert, Image, TextInput,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList, Trip } from '../types';
@@ -10,9 +11,18 @@ import { deleteTrip, getTrips } from '../utils/storage';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Trips'>;
 
+// Cycle: lavender → peach → mint
+const ICON_PALETTES = [
+  { bg: '#EAE7FA', ring: '#7460DC', dot: '#7460DC', chipBg: '#EAE7FA', chipText: '#5E48B8' },
+  { bg: '#FBF0E4', ring: '#C29050', dot: '#C29050', chipBg: '#FBF0E4', chipText: '#8A5E2A' },
+  { bg: '#E4F7F0', ring: '#4EAF88', dot: '#4EAF88', chipBg: '#E4F7F0', chipText: '#2A8A65' },
+];
+
 export default function TripsScreen() {
   const navigation = useNavigation<Nav>();
   const [trips, setTrips] = useState<Trip[]>([]);
+  const [query, setQuery] = useState('');
+  const insets = useSafeAreaInsets();
 
   useFocusEffect(useCallback(() => {
     getTrips().then(setTrips);
@@ -31,89 +41,188 @@ export default function TripsScreen() {
     ]);
   }
 
+  const filtered = query.trim()
+    ? trips.filter(t => t.name.includes(query.trim()))
+    : trips;
+
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      {/* Custom nav header */}
+      <View style={styles.navRow}>
+        <View style={styles.navLeft}>
+          <Image source={require('../../assets/halo-icon.png')} style={styles.navIcon} />
+          <View>
+            <Text style={styles.navTitle}>여행</Text>
+            <Text style={styles.navSub}>Halo · 내 원형 추억</Text>
+          </View>
+        </View>
+        <View style={styles.navAvatar}>
+          {/* Circle avatar icon */}
+          <View style={styles.avatarRing} />
+          <View style={styles.avatarDot} />
+        </View>
+      </View>
+
+      {/* Search bar */}
+      <View style={styles.searchWrap}>
+        <Text style={styles.searchIcon}>⌕</Text>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="여행 검색..."
+          placeholderTextColor="#C0BDE0"
+          value={query}
+          onChangeText={setQuery}
+          returnKeyType="search"
+        />
+      </View>
+
       <FlatList
-        data={trips}
+        data={filtered}
         keyExtractor={item => item.id}
-        contentContainerStyle={trips.length === 0 ? styles.emptyWrap : styles.list}
+        contentContainerStyle={filtered.length === 0 ? styles.emptyWrap : [styles.list, { paddingBottom: 120 + insets.bottom }]}
+        showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={styles.emptyTitle}>아직 여행이 없어요</Text>
             <Text style={styles.emptyHint}>+ 버튼을 눌러 첫 여행을 만들어보세요</Text>
           </View>
         }
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.card}
-            onPress={() => navigation.navigate('TripDetail', { tripId: item.id })}
-            onLongPress={() => handleDelete(item)}
-            activeOpacity={0.7}
-          >
-            <View style={styles.cardInner}>
-              <View style={styles.circlePreview}>
-                <View style={styles.circleRing} />
+        ListFooterComponent={
+          filtered.length > 0
+            ? <Text style={styles.deleteHint}>꾹 눌러 여행 삭제</Text>
+            : null
+        }
+        renderItem={({ item, index }) => {
+          const palette = ICON_PALETTES[index % 3];
+          const dateStr = new Date(item.createdAt).toLocaleDateString('ko-KR', {
+            year: 'numeric', month: 'numeric', day: 'numeric',
+          });
+          return (
+            <TouchableOpacity
+              style={styles.card}
+              onPress={() => navigation.navigate('TripDetail', { tripId: item.id })}
+              onLongPress={() => handleDelete(item)}
+              activeOpacity={0.7}
+            >
+              {/* Colorful circle icon */}
+              <View style={[styles.iconWrap, { backgroundColor: palette.bg }]}>
+                <View style={[styles.iconRing, { borderColor: palette.ring }]}>
+                  <View style={[styles.iconDot, { backgroundColor: palette.dot }]} />
+                </View>
               </View>
+
               <View style={styles.cardText}>
                 <Text style={styles.cardName}>{item.name}</Text>
-                <Text style={styles.cardDate}>
-                  {new Date(item.createdAt).toLocaleDateString('ko-KR')}
-                </Text>
-                <Text style={styles.cardAlbum}>{item.albumName}</Text>
+                <Text style={styles.cardDate}>{dateStr}</Text>
+                <View style={[styles.albumChip, { backgroundColor: palette.chipBg }]}>
+                  <Text style={[styles.albumChipText, { color: palette.chipText }]}>
+                    {item.albumName}
+                  </Text>
+                </View>
               </View>
-            </View>
-          </TouchableOpacity>
-        )}
+
+              <Text style={styles.chevron}>›</Text>
+            </TouchableOpacity>
+          );
+        }}
       />
 
-      <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('CreateTrip')}>
+      <TouchableOpacity
+        style={[styles.fab, { bottom: 40 + insets.bottom }]}
+        onPress={() => navigation.navigate('CreateTrip')}
+      >
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0d0d1a' },
-  list: { padding: 16, paddingBottom: 100 },
+  container: { flex: 1, backgroundColor: '#F5F3FC' },
+
+  // Nav header
+  navRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 24, paddingTop: 12, paddingBottom: 8,
+  },
+  navLeft: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  navIcon: { width: 48, height: 48, borderRadius: 12 },
+  navTitle: { fontSize: 22, fontWeight: '800', color: '#1A1430', letterSpacing: -0.5 },
+  navSub: { fontSize: 13, color: '#9891C0', marginTop: 1 },
+  navAvatar: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: '#7460DC',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  avatarRing: {
+    position: 'absolute',
+    width: 20, height: 20, borderRadius: 10,
+    borderWidth: 2, borderColor: '#fff', opacity: 0.9,
+  },
+  avatarDot: {
+    width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#fff',
+  },
+
+  // Search bar
+  searchWrap: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    marginHorizontal: 24, marginTop: 8, marginBottom: 16,
+    backgroundColor: '#fff',
+    borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12,
+    borderWidth: 1, borderColor: '#E8E5F5',
+    shadowColor: '#7460DC', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
+  },
+  searchIcon: { fontSize: 18, color: '#C0BDE0' },
+  searchInput: { flex: 1, fontSize: 14, color: '#1A1430', padding: 0 },
+
+  list: { paddingHorizontal: 24 },
   emptyWrap: { flex: 1 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 140 },
-  emptyTitle: { fontSize: 20, color: '#fff', fontWeight: '700', marginBottom: 8 },
-  emptyHint: { fontSize: 14, color: '#666' },
+  emptyTitle: { fontSize: 20, color: '#1A1430', fontWeight: '700', marginBottom: 8 },
+  emptyHint: { fontSize: 14, color: '#9891C0' },
+
+  deleteHint: {
+    textAlign: 'center', fontSize: 12, color: '#C0BDE0', paddingVertical: 8,
+  },
+
+  // Trip cards
   card: {
-    backgroundColor: '#161625',
-    borderRadius: 18,
-    padding: 20,
+    backgroundColor: '#fff',
+    borderRadius: 22, padding: 20,
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#252540',
+    borderWidth: 1, borderColor: '#EDE9FB',
+    flexDirection: 'row', alignItems: 'center', gap: 16,
+    shadowColor: '#7460DC', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.07, shadowRadius: 16, elevation: 3,
   },
-  cardInner: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  circlePreview: {
-    width: 52, height: 52,
+  iconWrap: {
+    width: 56, height: 56, borderRadius: 20,
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  },
+  iconRing: {
+    width: 32, height: 32, borderRadius: 16,
+    borderWidth: 2.5, borderStyle: 'dashed',
     alignItems: 'center', justifyContent: 'center',
   },
-  circleRing: {
-    width: 44, height: 44,
-    borderRadius: 22,
-    borderWidth: 2.5,
-    borderColor: '#7c6ff7',
-    opacity: 0.7,
-  },
+  iconDot: { width: 6, height: 6, borderRadius: 3 },
   cardText: { flex: 1 },
-  cardName: { fontSize: 17, fontWeight: '700', color: '#fff', marginBottom: 3 },
-  cardDate: { fontSize: 12, color: '#666', marginBottom: 2 },
-  cardAlbum: { fontSize: 12, color: '#7c6ff7' },
+  cardName: { fontSize: 16, fontWeight: '700', color: '#1A1430', marginBottom: 3 },
+  cardDate: { fontSize: 12, color: '#9891C0', marginBottom: 4 },
+  albumChip: {
+    alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20,
+  },
+  albumChipText: { fontSize: 11, fontWeight: '600' },
+  chevron: { fontSize: 20, color: '#C0BDE0', fontWeight: '300' },
+
+  // FAB
   fab: {
-    position: 'absolute', bottom: 32, right: 24,
-    width: 56, height: 56, borderRadius: 28,
-    backgroundColor: '#7c6ff7',
+    position: 'absolute', right: 28,
+    width: 60, height: 60, borderRadius: 30,
+    backgroundColor: '#7460DC',
     alignItems: 'center', justifyContent: 'center',
-    elevation: 8,
-    shadowColor: '#7c6ff7',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
+    shadowColor: '#7460DC', shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4, shadowRadius: 20, elevation: 10,
   },
   fabText: { color: '#fff', fontSize: 28, lineHeight: 32 },
 });

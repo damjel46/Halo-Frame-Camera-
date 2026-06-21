@@ -14,8 +14,6 @@ type Props = NativeStackScreenProps<RootStackParamList, 'AlignPhoto'>;
 type Nav = NativeStackNavigationProp<RootStackParamList, 'AlignPhoto'>;
 
 const SCREEN = Dimensions.get('window');
-
-// Must match CameraScreen.PHOTO_W / PHOTO_H exactly.
 const PHOTO_W = SCREEN.width;
 const PHOTO_H = Math.round(SCREEN.height * 0.65);
 
@@ -49,10 +47,7 @@ export default function AlignScreen() {
   }, [tripId, photoId]);
 
   const dragGesture = Gesture.Pan()
-    .onStart(() => {
-      startPanX.value = panX.value;
-      startPanY.value = panY.value;
-    })
+    .onStart(() => { startPanX.value = panX.value; startPanY.value = panY.value; })
     .onUpdate(e => {
       panX.value = startPanX.value + e.translationX;
       panY.value = startPanY.value + e.translationY;
@@ -91,14 +86,13 @@ export default function AlignScreen() {
 
   if (!trip || !photo) return <View style={styles.container} />;
 
-  // Circle overlay — same coordinate space as CameraScreen & VideoEditScreen
   const cx = trip.circle.xRatio * PHOTO_W;
   const cy = trip.circle.yRatio * PHOTO_H;
   const r  = trip.circle.radiusRatio * PHOTO_W;
 
   return (
     <View style={styles.container}>
-      {/* Photo edit area — fixed square so adjustments match the video preview exactly */}
+      {/* Photo edit area — dark */}
       <View style={styles.photoArea}>
         <GestureDetector gesture={composed}>
           <Animated.View style={StyleSheet.absoluteFill}>
@@ -110,7 +104,7 @@ export default function AlignScreen() {
           </Animated.View>
         </GestureDetector>
 
-        {/* Fixed circle guide overlay */}
+        {/* Circle guide overlay */}
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
           <View
             style={{
@@ -119,25 +113,29 @@ export default function AlignScreen() {
               width: r * 2, height: r * 2,
               borderRadius: r,
               borderWidth: 2.5,
-              borderColor: 'rgba(124,111,247,0.9)',
+              borderColor: 'rgba(160,140,255,0.85)',
             }}
           />
-          <View style={{ position: 'absolute', left: cx - 20, top: cy - 1, width: 40, height: 2, backgroundColor: 'rgba(124,111,247,0.4)' }} />
-          <View style={{ position: 'absolute', left: cx - 1, top: cy - 20, width: 2, height: 40, backgroundColor: 'rgba(124,111,247,0.4)' }} />
+          <View style={{ position: 'absolute', left: cx - 20, top: cy - 0.75, width: 40, height: 1.5, backgroundColor: 'rgba(160,140,255,0.4)' }} />
+          <View style={{ position: 'absolute', left: cx - 0.75, top: cy - 20, width: 1.5, height: 40, backgroundColor: 'rgba(160,140,255,0.4)' }} />
+          <View style={{ position: 'absolute', left: cx - 3, top: cy - 3, width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(160,140,255,0.9)' }} />
         </View>
       </View>
 
-      {/* Floating header — sits on top of photoArea, same y=0 as CameraScreen */}
+      {/* Floating header */}
       <View style={[styles.floatingHeader, { top: insets.top }]} pointerEvents="box-none">
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Text style={styles.backBtnText}>‹ 위치 보정</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.footer}>
-        <Text style={styles.footerHint}>
-          사진을 드래그/핀치해서 원형 물체를 가이드에 맞춰주세요
-        </Text>
+      {/* Footer — light, nav bar 위에 배치 */}
+      <View style={[styles.footer, { paddingBottom: Math.max(48, insets.bottom) }]}>
+        <View style={styles.hintCard}>
+          <Text style={styles.footerHint}>
+            사진을 드래그 / 핀치해서{'\n'}원형 물체를 가이드에 맞춰주세요
+          </Text>
+        </View>
         <View style={styles.footerBtns}>
           <TouchableOpacity style={styles.resetBtn} onPress={handleReset}>
             <Text style={styles.resetBtnText}>초기화</Text>
@@ -152,53 +150,56 @@ export default function AlignScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000' },
+  container: { flex: 1, backgroundColor: '#08060e' },
+
   photoArea: {
-    width: PHOTO_W,
-    height: PHOTO_H,
-    overflow: 'hidden',
-    backgroundColor: '#000',
+    width: PHOTO_W, height: PHOTO_H,
+    overflow: 'hidden', backgroundColor: '#08060e',
   },
-  photo: {
-    width: '100%',
-    height: '100%',
-  },
-  footer: {
-    flex: 1,
-    backgroundColor: '#0d0d1a',
-    padding: 20, gap: 14,
-    justifyContent: 'center',
-  },
+  photo: { width: '100%', height: '100%' },
+
   floatingHeader: {
-    position: 'absolute',
-    left: 0, right: 0,
-    zIndex: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
+    position: 'absolute', left: 0, right: 0, zIndex: 10,
+    paddingHorizontal: 8, paddingVertical: 6,
   },
   backBtn: {
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
+    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
   },
-  backBtnText: { color: '#fff', fontWeight: '600', fontSize: 16 },
-  footerHint: { color: '#888', fontSize: 13, textAlign: 'center' },
+  backBtnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
+
+  // Footer — light theme
+  footer: {
+    flex: 1,
+    backgroundColor: '#F5F3FC',
+    paddingHorizontal: 24, paddingTop: 24,
+    gap: 20,
+    justifyContent: 'center',
+  },
+  hintCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16, padding: 14,
+    borderWidth: 1, borderColor: '#E8E5F5',
+  },
+  footerHint: { fontSize: 13, color: '#9891C0', textAlign: 'center', lineHeight: 20 },
   footerBtns: { flexDirection: 'row', gap: 12 },
   resetBtn: {
-    flex: 1, paddingVertical: 14,
-    borderRadius: 14,
-    backgroundColor: '#161625',
+    flex: 1, paddingVertical: 18,
+    borderRadius: 18, backgroundColor: '#fff',
+    borderWidth: 1.5, borderColor: '#E8E5F5',
     alignItems: 'center',
-    borderWidth: 1, borderColor: '#252540',
+    shadowColor: '#7460DC', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
   },
-  resetBtnText: { color: '#888', fontWeight: '600', fontSize: 15 },
+  resetBtnText: { color: '#9891C0', fontWeight: '600', fontSize: 15 },
   saveBtn: {
-    flex: 2, paddingVertical: 14,
-    borderRadius: 14,
-    backgroundColor: '#7c6ff7',
+    flex: 2, paddingVertical: 18,
+    borderRadius: 18, backgroundColor: '#7460DC',
     alignItems: 'center',
+    shadowColor: '#7460DC', shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3, shadowRadius: 16, elevation: 6,
   },
   saveBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
 });

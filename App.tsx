@@ -4,6 +4,9 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet } from 'react-native';
+import { useEffect } from 'react';
+import { useCameraPermissions } from 'expo-camera';
+import * as MediaLibrary from 'expo-media-library';
 
 import { RootStackParamList } from './src/types';
 import TripsScreen from './src/screens/TripsScreen';
@@ -16,30 +19,41 @@ import VideoEditScreen from './src/screens/VideoEditScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-const NAV_THEME = {
-  headerStyle: { backgroundColor: '#0d0d1a' },
-  headerTintColor: '#fff',
-  headerTitleStyle: { fontWeight: '700' as const },
-  contentStyle: { backgroundColor: '#0d0d1a' },
-};
-
 export default function App() {
+  const [, requestCameraPermission] = useCameraPermissions();
+
+  useEffect(() => {
+    (async () => {
+      await requestCameraPermission();
+      await MediaLibrary.requestPermissionsAsync();
+    })();
+  }, []);
+
   return (
     <GestureHandlerRootView style={styles.root}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <NavigationContainer>
-        <Stack.Navigator initialRouteName="Trips" screenOptions={NAV_THEME}>
-          <Stack.Screen name="Trips" component={TripsScreen} options={{ title: 'Halo' }} />
-          <Stack.Screen name="CreateTrip" component={CreateTripScreen} options={{ title: '새 여행', presentation: 'modal' }} />
-          <Stack.Screen name="Camera" component={CameraScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="CircleSetup" component={CircleSetupScreen} options={{ title: '가이드 설정' }} />
+        <Stack.Navigator
+          initialRouteName="Trips"
+          screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#F5F3FC' } }}
+        >
+          <Stack.Screen name="Trips" component={TripsScreen} />
+          <Stack.Screen name="CreateTrip" component={CreateTripScreen} options={{ presentation: 'modal' }} />
+          <Stack.Screen name="Camera" component={CameraScreen} />
           <Stack.Screen
-            name="TripDetail"
-            component={TripDetailScreen}
-            options={({ route }) => ({ title: route.params.tripId })}
+            name="CircleSetup"
+            component={CircleSetupScreen}
+            options={{
+              headerShown: true,
+              title: '가이드 설정',
+              headerStyle: { backgroundColor: '#F5F3FC' },
+              headerTintColor: '#1A1430',
+              headerTitleStyle: { fontWeight: '700' },
+            }}
           />
-          <Stack.Screen name="AlignPhoto" component={AlignScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="VideoEdit" component={VideoEditScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="TripDetail" component={TripDetailScreen} />
+          <Stack.Screen name="AlignPhoto" component={AlignScreen} />
+          <Stack.Screen name="VideoEdit" component={VideoEditScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </GestureHandlerRootView>
